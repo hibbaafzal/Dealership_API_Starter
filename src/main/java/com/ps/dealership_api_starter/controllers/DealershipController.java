@@ -12,13 +12,13 @@ import java.util.List;
 @RestController
 @RequestMapping("dealerships")
 @CrossOrigin
+
 public class DealershipController
 {
     private DealershipDao dealershipDao;
 
     @Autowired
-    public DealershipController(DealershipDao dealershipDao)
-    {
+    public DealershipController(DealershipDao dealershipDao) {
         this.dealershipDao = dealershipDao;
     }
 

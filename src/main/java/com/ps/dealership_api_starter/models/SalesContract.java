@@ -62,7 +62,7 @@ public class SalesContract {
         this.customerEmail = customerEmail;
     }
 
-    public int getVin() {
+    public String getVin() {
         return vin;
     }
 
