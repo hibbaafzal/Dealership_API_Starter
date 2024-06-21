@@ -23,7 +23,9 @@ public class VehicleController {
 
     @GetMapping("/vehicles")
     public List<Vehicle> searchVehicles(@RequestParam(name = "minPrice", required = false) Double minPrice,
+                                      
                                         @RequestParam(name = "maxPrice", required = false) Double maxPrice,
+                                        
                                         @RequestParam(name = "make", required = false) String make,
                                         @RequestParam(name = "model", required = false) String model,
                                         @RequestParam(name = "minYear", required = false) Integer minYear,
