@@ -1,229 +1,248 @@
+
 package com.ps.dealership_api_starter.data.mysql;
 
-
+import com.ps.dealership_api_starter.controllers.VehicleController;
 import com.ps.dealership_api_starter.data.VehicleDao;
 import com.ps.dealership_api_starter.models.Vehicle;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 @Component
-public class MySqlVehicleDao implements VehicleDao {
+public class MySqlVehicleDao extends VehicleController implements VehicleDao {
 
+    private final DataSource dataSource;
+
+    @Autowired
     public MySqlVehicleDao(DataSource dataSource) {
-
+        this.dataSource = dataSource;
     }
 
+    @Override
+    public List<Vehicle> getAllVehicles() {
+        List<Vehicle> vehicles = new ArrayList<>();
+        String query = "SELECT * FROM vehicles";
 
-    @Repository
-    public class VehicleDao {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query);
+                ResultSet resultSet = preparedStatement.executeQuery()
+        ) {
+            while (resultSet.next()) {
+                Vehicle vehicle = new Vehicle(
+                        resultSet.getString("vin"),
+                        resultSet.getString("make"),
+                        resultSet.getString("model"),
+                        resultSet.getInt("year"),
+                        resultSet.getString("color")
+                );
+                vehicles.add(vehicle);
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return vehicles;
+    }
 
-        @Autowired
-        private DataSource dataSource;
+    @Override
+    public List<Vehicle> getVehiclesByMakeModel(String make, String model) {
+        List<Vehicle> vehicles = new ArrayList<>();
+        String query = "SELECT * FROM vehicles WHERE make = ? AND model = ?";
 
-        public List<Vehicle> getAllVehicles() {
-            List<Vehicle> vehicles = new ArrayList<>();
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM vehicles");
-                    ResultSet resultSet = preparedStatement.executeQuery()
-            ) {
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setString(1, make);
+            preparedStatement.setString(2, model);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
                 while (resultSet.next()) {
-                    String vin = resultSet.getString("vin");
-                    String make = resultSet.getString("make");
-                    String model = resultSet.getString("model");
-                    int year = resultSet.getInt("year");
-                    String color = resultSet.getString("color");
-
-                    Vehicle vehicle = new Vehicle(vin, make, model, year, color);
+                    Vehicle vehicle = new Vehicle(
+                            resultSet.getString("vin"),
+                            resultSet.getString("make"),
+                            resultSet.getString("model"),
+                            resultSet.getInt("year"),
+                            resultSet.getString("color")
+                    );
                     vehicles.add(vehicle);
                 }
-            } catch (Exception e) {
-                e.printStackTrace();
             }
-            return vehicles;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
+        return vehicles;
+    }
 
-        public List<Vehicle> getVehiclesByMakeModel(String make, String model) {
-            List<Vehicle> vehicles = new ArrayList<>();
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "SELECT * FROM vehicles WHERE make = ? AND model = ?")
-            ) {
-                preparedStatement.setString(1, make);
-                preparedStatement.setString(2, model);
+    @Override
+    public List<Vehicle> getVehiclesByYearRange(int startYear, int endYear) {
+        List<Vehicle> vehicles = new ArrayList<>();
+        String query = "SELECT * FROM vehicles WHERE year BETWEEN ? AND ?";
 
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Vehicle vehicle = new Vehicle(
-                                resultSet.getString("vin"),
-                                resultSet.getString("make"),
-                                resultSet.getString("model"),
-                                resultSet.getInt("year"),
-                                resultSet.getString("color")
-                        );
-                        vehicles.add(vehicle);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return vehicles;
-        }
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setInt(1, startYear);
+            preparedStatement.setInt(2, endYear);
 
-        public List<Vehicle> getVehiclesByYearRange(int startYear, int endYear) {
-            List<Vehicle> vehicles = new ArrayList<>();
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "SELECT * FROM vehicles WHERE year BETWEEN ? AND ?")
-            ) {
-                preparedStatement.setInt(1, startYear);
-                preparedStatement.setInt(2, endYear);
-
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Vehicle vehicle = new Vehicle(
-                                resultSet.getString("vin"),
-                                resultSet.getString("make"),
-                                resultSet.getString("model"),
-                                resultSet.getInt("year"),
-                                resultSet.getString("color")
-                        );
-                        vehicles.add(vehicle);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return vehicles;
-        }
-
-        public List<Vehicle> getVehiclesByColor(String color) {
-            List<Vehicle> vehicles = new ArrayList<>();
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "SELECT * FROM vehicles WHERE color = ?")
-            ) {
-                preparedStatement.setString(1, color);
-
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    while (resultSet.next()) {
-                        Vehicle vehicle = new Vehicle(
-                                resultSet.getString("vin"),
-                                resultSet.getString("make"),
-                                resultSet.getString("model"),
-                                resultSet.getInt("year"),
-                                resultSet.getString("color")
-                        );
-                        vehicles.add(vehicle);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return vehicles;
-        }
-
-        public int createVehicle(Vehicle vehicle) {
-            int generatedId = -1;
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "INSERT INTO vehicles(vin, make, model, year, color) VALUES(?,?,?,?,?)",
-                            Statement.RETURN_GENERATED_KEYS)
-            ) {
-                preparedStatement.setString(1, vehicle.getVin());
-                preparedStatement.setString(2, vehicle.getMake());
-                preparedStatement.setString(3, vehicle.getModel());
-                preparedStatement.setInt(4, vehicle.getYear());
-                preparedStatement.setString(5, vehicle.getColor());
-
-                preparedStatement.executeUpdate();
-
-                try (ResultSet keys = preparedStatement.getGeneratedKeys()) {
-                    if (keys.next()) {
-                        generatedId = keys.getInt(1);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return generatedId;
-        }
-
-        public void deleteVehicle(String vin) {
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "DELETE FROM vehicles WHERE vin = ?")
-            ) {
-                preparedStatement.setString(1, vin);
-                preparedStatement.executeUpdate();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-
-        public List <Vehicle> getVehicleByVin(String vin) {
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "SELECT * FROM vehicles WHERE vin = ?")
-            ) {
-                preparedStatement.setString(1, vin);
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    if (resultSet.next()) {
-                        Vehicle vehicle = new Vehicle(
-                                resultSet.getString("vin"),
-                                resultSet.getString("make"),
-                                resultSet.getString("model"),
-                                resultSet.getInt("year"),
-                                resultSet.getString("color")
-                        );
-                        return (vehicle);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return Optional.empty();
-        }
-
-        @Component
-        public Vehicle updateVehicle(String vin, Vehicle vehicle) {
-            Vehicle existingVehicle = getVehicleByVin(vin).orElse(null);
-            if (existingVehicle != null) {
-                try (
-                        Connection connection = dataSource.getConnection();
-                        PreparedStatement preparedStatement = connection.prepareStatement(
-                                "UPDATE vehicles SET make = ?, model = ?, year = ?, color = ? WHERE vin = ?")
-                ) {
-                    preparedStatement.setString(1, vehicle.getMake());
-                    preparedStatement.setString(2, vehicle.getModel());
-                    preparedStatement.setInt(3, vehicle.getYear());
-                    preparedStatement.setString(4, vehicle.getColor());
-                    preparedStatement.setString(5, vin);
-
-                    preparedStatement.executeUpdate();
-                    return vehicle;
-                } catch (Exception e) {
-                    e.printStackTrace();
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Vehicle vehicle = new Vehicle(
+                            resultSet.getString("vin"),
+                            resultSet.getString("make"),
+                            resultSet.getString("model"),
+                            resultSet.getInt("year"),
+                            resultSet.getString("color")
+                    );
+                    vehicles.add(vehicle);
                 }
             }
-            return null;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return vehicles;
+    }
+
+    @Override
+    public List<Vehicle> getVehiclesByColor(String color) {
+        List<Vehicle> vehicles = new ArrayList<>();
+        String query = "SELECT * FROM vehicles WHERE color = ?";
+
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setString(1, color);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Vehicle vehicle = new Vehicle(
+                            resultSet.getString("vin"),
+                            resultSet.getString("make"),
+                            resultSet.getString("model"),
+                            resultSet.getInt("year"),
+                            resultSet.getString("color")
+                    );
+                    vehicles.add(vehicle);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return vehicles;
+    }
+
+    @Override
+    public int createVehicle(Vehicle vehicle) {
+        int generatedId = -1;
+        String query = "INSERT INTO vehicles (vin, make, model, year, color) VALUES (?, ?, ?, ?, ?)";
+
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(
+                        query, Statement.RETURN_GENERATED_KEYS)
+        ) {
+            preparedStatement.setString(1, vehicle.getVin());
+            preparedStatement.setString(2, vehicle.getMake());
+            preparedStatement.setString(3, vehicle.getModel());
+            preparedStatement.setInt(4, vehicle.getYear());
+            preparedStatement.setString(5, vehicle.getColor());
+
+            preparedStatement.executeUpdate();
+
+            try (ResultSet keys = preparedStatement.getGeneratedKeys()) {
+                while (keys.next()) {
+                    generatedId = keys.getInt(1);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return generatedId;
+    }
+
+    @Override
+    public void deleteVehicle(String vin) {
+        String query = "DELETE FROM vehicles WHERE vin = ?";
+
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setString(1, vin);
+            preparedStatement.executeUpdate();
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
         }
     }
-}
 
+    @Override
+    public List<Vehicle> getVehicleByVin(String vin) {
+        String query = "SELECT * FROM vehicles WHERE vin = ?";
+
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setString(1, vin);
+
+            try (ResultSet resultSet = preparedStatement.executeQuery()) {
+                while (resultSet.next()) {
+                    Vehicle vehicle = new Vehicle(
+                            resultSet.getString("vin"),
+                            resultSet.getString("make"),
+                            resultSet.getString("model"),
+                            resultSet.getInt("year"),
+                            resultSet.getString("color")
+                    );
+                    return Optional.of(vehicle);
+                }
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return Optional.empty();
+    }
+
+    @Override
+    public void updateVehicle(String vin, Vehicle vehicle) {
+        String query = "UPDATE vehicles SET make = ?, model = ?, year = ?, color = ? WHERE vin = ?";
+
+        try (
+                Connection connection = dataSource.getConnection();
+                PreparedStatement preparedStatement = connection.prepareStatement(query)
+        ) {
+            preparedStatement.setString(1, vehicle.getMake());
+            preparedStatement.setString(2, vehicle.getModel());
+            preparedStatement.setInt(3, vehicle.getYear());
+            preparedStatement.setString(4, vehicle.getColor());
+            preparedStatement.setString(5, vin);
+
+            int rowsUpdated = preparedStatement.executeUpdate();
+            if (rowsUpdated > 0) {
+                return vehicle;
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
+        return null;
+    }
+}
