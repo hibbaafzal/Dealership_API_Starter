@@ -22,10 +22,16 @@ public class SalesContractController {
     @GetMapping("{id}")
     public SalesContract getSalesContractById(@PathVariable Long id) {
         try {
-            return salesContractDao.getSalesContractById(id)
-                    .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND));
-        } catch (Exception e) {
 
+            var salesContract = salesContractDao.getSalesContractById(id);
+            if (salesContract == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+
+            return (SalesContract) salesContract;
+
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while fetching sales contract");
         }
     }
 
@@ -35,7 +41,7 @@ public class SalesContractController {
             return salesContractDao.createSalesContract(salesContract);
         } catch (Exception e) {
             e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while adding sales contract");
         }
     }
 }
-
