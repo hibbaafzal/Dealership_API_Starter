@@ -14,7 +14,7 @@ import java.util.List;
 @CrossOrigin
 public class VehicleController {
 
-    private VehicleDao vehicleDao;
+    private final VehicleDao vehicleDao;
 
     @Autowired
     public VehicleController(VehicleDao vehicleDao) {
@@ -22,33 +22,82 @@ public class VehicleController {
     }
 
     @GetMapping("/vehicles")
-    public List<Vehicle> searchVehicles(@RequestParam(name = "minPrice", required = false) Double minPrice,
-                                      
-                                        @RequestParam(name = "maxPrice", required = false) Double maxPrice,
-                                        
-                                        @RequestParam(name = "make", required = false) String make,
-                                        @RequestParam(name = "model", required = false) String model,
-                                        @RequestParam(name = "minYear", required = false) Integer minYear,
-                                        @RequestParam(name = "maxYear", required = false) Integer maxYear,
-                                        @RequestParam(name = "color", required = false) String color,
-                                        @RequestParam(name = "minMiles", required = false) Integer minMiles,
-                                        @RequestParam(name = "maxMiles", required = false) Integer maxMiles,
-                                        @RequestParam(name = "type", required = false) String type) {
+    public List<Vehicle> searchVehicles(
+            @RequestParam(name = "minPrice", required = false) Double minPrice,
+            @RequestParam(name = "maxPrice", required = false) Double maxPrice,
+            @RequestParam(name = "make", required = false) String make,
+            @RequestParam(name = "model", required = false) String model,
+            @RequestParam(name = "minYear", required = false) Integer minYear,
+            @RequestParam(name = "maxYear", required = false) Integer maxYear,
+            @RequestParam(name = "color", required = false) String color,
+            @RequestParam(name = "minMiles", required = false) Integer minMiles,
+            @RequestParam(name = "maxMiles", required = false) Integer maxMiles,
+            @RequestParam(name = "type", required = false) String type
+    ) {
         try {
-            return vehicleDao.getFilteredVehicles(minPrice, maxPrice, make, model, minYear, maxYear, color, minMiles, maxMiles, type);
+            return vehicleDao.search(minPrice, maxPrice, make, model, minYear, maxYear, color, minMiles, maxMiles, type);
         } catch (Exception e) {
             e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while searching for vehicles");
         }
     }
 
     @GetMapping("/vehicles/{vin}")
     public Vehicle getVehicleByVin(@PathVariable String vin) {
         try {
-            return vehicleDao.getVehicleByVin(vin);
+            Vehicle vehicle = (Vehicle) vehicleDao.getVehicleByVin(vin);
+            if (vehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicle;
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
+
+
+    @GetMapping("/vehicles/{make}/{model}")
+    public Vehicle getVehicleByMakeModel(@PathVariable String make, @PathVariable String model) {
+        try {
+            Vehicle vehicle = (Vehicle) vehicleDao.getVehicleByMakeModel(make, model);
+            if (vehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicle;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+
+    @GetMapping("/vehicles/year/{minYear}/{maxYear}")
+    public List<Vehicle> getVehiclesByYearRange(@PathVariable int minYear, @PathVariable int maxYear) {
+        try {
+            List<Vehicle> vehicles = vehicleDao.getVehiclesByYearRange(minYear, maxYear);
+            if (vehicles == null || vehicles.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicles;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+    @GetMapping("/vehicles/color/{color}")
+    public List<Vehicle> getVehiclesByColor(@PathVariable String color) {
+        try {
+            List<Vehicle> vehicles = vehicleDao.getVehiclesByColor(color);
+            if (vehicles == null || vehicles.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicles;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+
+
 
     @PostMapping("/vehicles")
     public Vehicle addVehicle(@RequestBody Vehicle vehicle) {
@@ -60,7 +109,7 @@ public class VehicleController {
             return vehicle;
         } catch (Exception e) {
             e.printStackTrace();
-
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while adding vehicle");
         }
     }
 
@@ -73,18 +122,19 @@ public class VehicleController {
             }
         } catch (Exception e) {
             e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while updating vehicle");
         }
     }
 
-    @DeleteMapping("{vin}")
-    public void deleteVehicle(@PathVariable String vin) {
+    @DeleteMapping("{id}")
+    public void deleteVehicle(@PathVariable int id) {
         try {
-            boolean deleted = vehicleDao.deleteVehicle(vin);
-            if (!deleted) {
+            Vehicle vehicle = vehicleDao.deleteVehicle(id);
+            if (vehicle == null) {
                 throw new ResponseStatusException(HttpStatus.NOT_FOUND);
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
         }
     }
 }
