@@ -1,63 +1,140 @@
-package com.ps.dealership_api_starter.data.mysql;
+package com.ps.dealership_api_starter.controllers;
 
-import com.ps.dealership_api_starter.data.SalesContractsDao;
-import com.ps.dealership_api_starter.models.SalesContract;
+import com.ps.dealership_api_starter.data.VehicleDao;
+import com.ps.dealership_api_starter.models.Vehicle;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
-import javax.sql.DataSource;
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.Statement;
-import java.util.Optional;
+import java.util.List;
 
-public class MySqlSalesContractsDao implements SalesContractsDao {
+@RestController
+@RequestMapping("vehicles")
+@CrossOrigin
+public class VehicleController {
 
+    private final VehicleDao vehicleDao;
 
+    @Autowired
+    public VehicleController(VehicleDao vehicleDao) {
+        this.vehicleDao = vehicleDao;
+    }
 
-        @Autowired
-        private DataSource dataSource;
-
-        public <SalesContract> Object getSalesContractById(Long id) {
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement("SELECT * FROM sales_contracts WHERE id = ?")
-            ) {
-                preparedStatement.setLong(1, id);
-                try (ResultSet resultSet = preparedStatement.executeQuery()) {
-                    if (resultSet.next()) {
-                        SalesContract salesContract = new SalesContract();
-                        salesContract.setId(resultSet.getLong("id"));
-                        salesContract.setDetails(resultSet.getString("details"));
-                        return Optional.of(salesContract);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return Optional.empty();
-        }
-
-        public SalesContract createSalesContract(SalesContract salesContract) {
-            try (
-                    Connection connection = dataSource.getConnection();
-                    PreparedStatement preparedStatement = connection.prepareStatement(
-                            "INSERT INTO sales_contracts(vin) VALUES(?)",
-                            Statement.RETURN_GENERATED_KEYS)
-            ) {
-                preparedStatement.setString(1, salesContract.getVin());
-                preparedStatement.executeUpdate();
-
-                try (ResultSet keys = preparedStatement.getGeneratedKeys()) {
-                    if (keys.next()) {
-                        salesContract.setId(keys.getLong(1));
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-            return salesContract;
+    @GetMapping("/vehicles")
+    public List<Vehicle> searchVehicles(
+            @RequestParam(name = "minPrice", required = false) Double minPrice,
+            @RequestParam(name = "maxPrice", required = false) Double maxPrice,
+            @RequestParam(name = "make", required = false) String make,
+            @RequestParam(name = "model", required = false) String model,
+            @RequestParam(name = "minYear", required = false) Integer minYear,
+            @RequestParam(name = "maxYear", required = false) Integer maxYear,
+            @RequestParam(name = "color", required = false) String color,
+            @RequestParam(name = "minMiles", required = false) Integer minMiles,
+            @RequestParam(name = "maxMiles", required = false) Integer maxMiles,
+            @RequestParam(name = "type", required = false) String type
+    ) {
+        try {
+            return vehicleDao.search(minPrice, maxPrice, make, model, minYear, maxYear, color, minMiles, maxMiles, type);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while searching for vehicles");
         }
     }
 
+    @GetMapping("/vehicles/{vin}")
+    public Vehicle getVehicleByVin(@PathVariable String vin) {
+        try {
+            Vehicle vehicle = (Vehicle) vehicleDao.getVehicleByVin(vin);
+            if (vehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicle;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+
+    @GetMapping("/vehicles/{make}/{model}")
+    public Vehicle getVehicleByMakeModel(@PathVariable String make, @PathVariable String model) {
+        try {
+            Vehicle vehicle = (Vehicle) vehicleDao.getVehicleByMakeModel(make, model);
+            if (vehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicle;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+
+    @GetMapping("/vehicles/year/{minYear}/{maxYear}")
+    public List<Vehicle> getVehiclesByYearRange(@PathVariable int minYear, @PathVariable int maxYear) {
+        try {
+            List<Vehicle> vehicles = vehicleDao.getVehiclesByYearRange(minYear, maxYear);
+            if (vehicles == null || vehicles.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicles;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+    @GetMapping("/vehicles/color/{color}")
+    public List<Vehicle> getVehiclesByColor(@PathVariable String color) {
+        try {
+            List<Vehicle> vehicles = vehicleDao.getVehiclesByColor(color);
+            if (vehicles == null || vehicles.isEmpty()) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+            return vehicles;
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
+
+
+
+
+    @PostMapping("/vehicles")
+    public Vehicle addVehicle(@RequestBody Vehicle vehicle) {
+        try {
+            int generatedId = vehicleDao.createVehicle(vehicle);
+            if (generatedId == -1) {
+                throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to create vehicle");
+            }
+            return vehicle;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while adding vehicle");
+        }
+    }
+
+    @PutMapping("{vin}")
+    public void updateVehicle(@PathVariable String vin, @RequestBody Vehicle vehicle) {
+        try {
+            Vehicle updatedVehicle = vehicleDao.updateVehicle(vin, vehicle);
+            if (updatedVehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Error occurred while updating vehicle");
+        }
+    }
+
+    @DeleteMapping("{id}")
+    public void deleteVehicle(@PathVariable int id) {
+        try {
+            Vehicle vehicle = vehicleDao.deleteVehicle(id);
+            if (vehicle == null) {
+                throw new ResponseStatusException(HttpStatus.NOT_FOUND);
+            }
+        } catch (Exception e) {
+            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR, "Oops... our bad.");
+        }
+    }
 }
